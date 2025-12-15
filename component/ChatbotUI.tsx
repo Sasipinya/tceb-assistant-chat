@@ -339,9 +339,9 @@ export default function ChatbotUI() {
       className={`flex flex-col h-screen ${bgColor} ${textColor} transition-colors duration-300`}
     >
       <header
-        className={`flex items-center justify-between px-4 py-2 pt-1 border-b ${borderColor}`}
+        className={`hidden items-center justify-between px-4 py-2 pt-1 pl-[30px] border-b ${borderColor}`}
       >
-        <div className="hidden items-center gap-2 text-2xl font-bold">
+        <div className="flex items-center gap-2 text-2xl font-bold">
           {/* <Image
             src="/brand.png"
             alt="logo"
