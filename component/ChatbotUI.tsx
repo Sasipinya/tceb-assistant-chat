@@ -349,6 +349,7 @@ export default function ChatbotUI() {
             height={50}
             className="rounded-lg"
           /> */}
+          {/* ปรับเปลี่ยน ui */}
           <p>SMART SEARCH </p>
           <span className={`absolute top-[28px] text-sm ${
             theme === 'light' ?'text-[#0e5a8b7a]':'text-[#ffffff]'}`}>How can I assist you today?</span>
