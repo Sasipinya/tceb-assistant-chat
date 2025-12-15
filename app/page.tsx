@@ -6,7 +6,6 @@ export default function Home() {
     <div >
       <main className="flex flex-col ">
        <ChatbotUI/>
-       {/* By Sasipinya */}
       </main>
     </div>
   );
