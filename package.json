@@ -1,0 +1,30 @@
+{
+  "name": "tceb-assistant-chat",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "PORT=4000 next dev",
+    "build": "next build",
+    "start": "PORT=8080 next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "html-react-parser": "^5.2.10",
+    "lucide-react": "^0.545.0",
+    "next": "^16.0.8",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "vercel": "^25.2.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
