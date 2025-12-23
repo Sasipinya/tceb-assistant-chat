@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Sparkles, Moon, Sun } from 'lucide-react';
-import Image from 'next/image';
 import type React from 'react';
 import { generateUUID } from '@/utils/uuid';
 import parse from 'html-react-parser';
@@ -60,23 +59,45 @@ export default function ChatbotUI() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const autoSentRef = useRef(false); // ป้องกันส่งซ้ำ
+  const autoSentRef = useRef(false);
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
-  };
+  //  Detect iOS
+  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+  //  Safe scroll
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    if (messagesEndRef.current) {
+      try {
+        if ('scrollBehavior' in document.documentElement.style) {
+          messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+        } else {
+          messagesEndRef.current.scrollIntoView(false);
+        }
+      } catch {
+        messagesEndRef.current.scrollIntoView();
+      }
+    }
+  }, []);
 
   useEffect(() => {
     scrollToBottom('smooth');
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  // auto-resize textarea
+  //  Auto-resize textarea
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+
+    el.style.height = '0';
+    el.style.overflow = 'hidden';
+
+    const scrollHeight = el.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, 44), 160);
+
+    el.style.height = newHeight + 'px';
+    el.style.overflow = scrollHeight > 160 ? 'auto' : 'hidden';
   }, [input]);
 
   const pushMessage = useCallback((msg: Message) => {
@@ -92,9 +113,6 @@ export default function ChatbotUI() {
     []
   );
 
-  /**
-   * 🪄 Animate Greeting
-   */
   const animateGreeting = useCallback(
     async (assistantId: string, greetingText: string) => {
       if (!greetingText) return;
@@ -216,8 +234,6 @@ export default function ChatbotUI() {
                   content: baseGreeting + answerBuffer,
                   isStreaming: true,
                 });
-              } else if (json.done === true) {
-                // จัดการตอนออกจาก loop
               }
             } catch {
               answerBuffer += String(data);
@@ -268,7 +284,7 @@ export default function ChatbotUI() {
         });
       }
     } catch (e) {
-      if ((e as any).name === 'AbortError') {
+      if ((e as Error).name === 'AbortError') {
         updateMessage(assistantId, {
           content: greetingText + '\n\nยกเลิกคำขอก่อนหน้าแล้ว',
           isStreaming: false,
@@ -288,9 +304,8 @@ export default function ChatbotUI() {
     }
   }, [isLoading, conversationId, pushMessage, animateGreeting, updateMessage]);
 
-  // 🎯 ตรวจสอบ URL parameter เมื่อ component mount
   useEffect(() => {
-    if (autoSentRef.current) return; // ป้องกันส่งซ้ำ
+    if (autoSentRef.current) return;
 
     const params = new URLSearchParams(window.location.search);
     const messageParam = params.get('message');
@@ -298,18 +313,23 @@ export default function ChatbotUI() {
     if (messageParam && messageParam.trim()) {
       autoSentRef.current = true;
       const decodedMessage = decodeURIComponent(messageParam);
-      setInput(decodedMessage); // แสดงใน input box
-      
-      // รอเล็กน้อยแล้วส่งข้อความอัตโนมัติ
+      setInput(decodedMessage);
+
       setTimeout(() => {
         sendMessage(decodedMessage);
-        setInput(''); // ล้าง input หลังส่ง
+        setInput('');
       }, 500);
     }
   }, [sendMessage]);
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
+
+    //  iOS: blur to dismiss keyboard
+    if (isIOS) {
+      inputRef.current?.blur();
+    }
+
     await sendMessage(input);
     setInput('');
   };
@@ -336,23 +356,22 @@ export default function ChatbotUI() {
 
   return (
     <div
-      className={`flex flex-col h-screen ${bgColor} ${textColor} transition-colors duration-300`}
+      ref={containerRef}
+      className={`ios-container ${bgColor} ${textColor} transition-colors duration-300`}
     >
+      {/* Header */}
       <header
-        className={`flex items-center justify-between px-4 py-2 pt-1 border-b ${borderColor}`}
+        className={`ios-header flex items-center justify-between px-4 py-2 pt-1 border-b ${borderColor}`}
       >
         <div className="flex items-center gap-2 text-2xl font-bold">
-          {/* <Image
-            src="/brand.png"
-            alt="logo"
-            width={50}
-            height={50}
-            className="rounded-lg"
-          /> */}
-          {/* ปรับเปลี่ยน ui */}
           <p>SMART SEARCH </p>
-          <span className={`absolute top-[28px] text-sm ${
-            theme === 'light' ?'text-[#0e5a8b7a]':'text-[#ffffff]'}`}>How can I assist you today?</span>
+          <span
+            className={`absolute top-[28px] text-sm ${
+              theme === 'light' ? 'text-[#0e5a8b7a]' : 'text-[#ffffff]'
+            }`}
+          >
+            How can I assist you today?
+          </span>
         </div>
         <button
           onClick={toggleTheme}
@@ -369,11 +388,12 @@ export default function ChatbotUI() {
         </button>
       </header>
 
+      {/* Main - Scrollable area */}
       <main
-        className={`flex-1 overflow-y-auto px-4 py-6 transition-all duration-700 ${
+        className={`ios-main px-4 py-6 transition-all duration-700 ${
           chatStarted
             ? theme === 'light'
-              ? 'bg-[#f9fafb]/80 backdrop-blur-sm'
+              ? 'bg-[#f9fafb]/80'
               : 'bg-gradient-to-b from-gray-900 to-gray-800'
             : 'bg-transparent'
         }`}
@@ -426,7 +446,7 @@ export default function ChatbotUI() {
                   }
                 >
                   <span
-                    className={`pointer-events-none absolute  ${
+                    className={`pointer-events-none absolute ${
                       m.role === 'user'
                         ? 'bottom-3 right-[-8px] border-y-8 border-l-8 border-y-transparent border-l-[rgb(246_220_147)]'
                         : 'bottom-2 left-[-8px] border-y-8 border-r-8 border-y-transparent ' +
@@ -443,9 +463,7 @@ export default function ChatbotUI() {
                         {parse(m.content || '')}
                       </div>
                     ) : (
-                      <div className="whitespace-pre-wrap">
-                        {m.content}
-                      </div>
+                      <div className="whitespace-pre-wrap">{m.content}</div>
                     )}
 
                     {m.isStreaming && (
@@ -464,7 +482,13 @@ export default function ChatbotUI() {
         )}
       </main>
 
-      <footer className={`border-t ${borderColor} p-4`}>
+      {/* Footer - Input area */}
+      <footer
+        className={`ios-footer border-t ${borderColor} p-4`}
+        style={{
+          backgroundColor: theme === 'light' ? '' : 'rgba(17,24,39,0.98)',
+        }}
+      >
         <div className="max-w-3xl mx-auto">
           <div
             className={`flex gap-2 items-end ${inputBg} rounded-2xl border ${borderColor} p-2 focus-within:ring-2 focus-within:ring-opacity-50 transition-all`}
@@ -477,13 +501,23 @@ export default function ChatbotUI() {
               onKeyDown={handleKeyDown}
               placeholder="พิมพ์ข้อความของคุณ..."
               rows={1}
-              className={`flex-1 ${inputBg} ${textColor} resize-none outline-none px-2 py-2 max-h-40 placeholder-gray-400 `}
+              className={`flex-1 ${inputBg} ${textColor} resize-none outline-none px-2 py-2 max-h-40 placeholder-gray-400`}
               disabled={isLoading}
+              style={{
+                fontSize: '16px',
+                WebkitAppearance: 'none',
+                borderRadius: 0,
+              }}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="sentences"
+              spellCheck={false}
+              enterKeyHint="send"
             />
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
-              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
+              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-95 touch-manipulation"
               style={{
                 background:
                   input.trim() && !isLoading
@@ -506,7 +540,7 @@ export default function ChatbotUI() {
             </button>
           </div>
           <p
-            className={`text-xs text-center mt-2 ${
+            className={`text-xs max-[399px]:text-[10px] text-center mt-2 ${
               theme === 'light' ? 'text-gray-500' : 'text-gray-400'
             }`}
           >
