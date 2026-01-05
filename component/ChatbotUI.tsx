@@ -364,9 +364,9 @@ export default function ChatbotUI() {
         className={`ios-header flex items-center justify-between px-4 py-2 pt-1 border-b ${borderColor}`}
       >
         <div className="flex items-center gap-2 text-2xl max-[399px]:text-[16px] font-bold">
-          <p>SMART SEARCH </p>
+          <p className='!font-prompt'>SMART SEARCH </p>
           <span
-            className={`absolute top-[28px] text-sm max-[399px]:text-[10px] ${
+            className={`!font-prompt absolute top-[28px] text-sm max-[399px]:text-[10px] ${
               theme === 'light' ? 'text-[#0e5a8b7a]' : 'text-[#ffffff]'
             }`}
           >
@@ -403,12 +403,12 @@ export default function ChatbotUI() {
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-[#0371c1] to-[#ffc300]">
               <Sparkles className="w-8 h-8 text-white animate-spin-slow" />
             </div>
-            <h2 className="text-2xl font-semibold mb-2">
+            <h2 className="!font-prompt text-2xl font-semibold mb-2">
               สวัสดีครับ มีอะไรให้ช่วยไหมครับ?
             </h2>
             <p
               className={
-                theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+                theme === 'light' ? '!font-prompt text-gray-600' : '!font-prompt text-gray-400'
               }
             >
               เริ่มสนทนาได้เลยครับ
@@ -446,7 +446,7 @@ export default function ChatbotUI() {
                   }
                 >
                   <span
-                    className={`pointer-events-none absolute ${
+                    className={`!font-prompt pointer-events-none absolute ${
                       m.role === 'user'
                         ? 'bottom-3 right-[-8px] border-y-8 border-l-8 border-y-transparent border-l-[rgb(246_220_147)]'
                         : 'bottom-2 left-[-8px] border-y-8 border-r-8 border-y-transparent ' +
@@ -459,15 +459,15 @@ export default function ChatbotUI() {
 
                   <div className="break-words">
                     {m.role === 'assistant' ? (
-                      <div className="text-chat-assistant">
+                      <div className="!font-prompt text-chat-assistant">
                         {parse(m.content || '')}
                       </div>
                     ) : (
-                      <div className="whitespace-pre-wrap">{m.content}</div>
+                      <div className="!font-prompt whitespace-pre-wrap">{m.content}</div>
                     )}
 
                     {m.isStreaming && (
-                      <span className="inline-flex items-center ml-1 align-baseline">
+                      <span className="!font-prompt inline-flex items-center ml-1 align-baseline">
                         <i className="w-1 h-1 rounded-full bg-current animate-wave [animation-delay:0ms]" />
                         <i className="w-1 h-1 ml-1 rounded-full bg-current animate-wave [animation-delay:200ms]" />
                         <i className="w-1 h-1 ml-1 rounded-full bg-current animate-wave [animation-delay:400ms]" />
@@ -501,7 +501,7 @@ export default function ChatbotUI() {
               onKeyDown={handleKeyDown}
               placeholder="พิมพ์ข้อความของคุณ..."
               rows={1}
-              className={`flex-1 ${inputBg} ${textColor} resize-none outline-none px-2 py-2 max-h-40 placeholder-gray-400`}
+              className={`flex-1 ${inputBg} ${textColor} resize-none outline-none px-2 py-2 max-h-40 placeholder-gray-400 !font-prompt`}
               disabled={isLoading}
               style={{
                 fontSize: '16px',
@@ -517,7 +517,7 @@ export default function ChatbotUI() {
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
-              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-95 touch-manipulation"
+              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-95 touch-manipulation !font-prompt"
               style={{
                 background:
                   input.trim() && !isLoading
@@ -540,7 +540,7 @@ export default function ChatbotUI() {
             </button>
           </div>
           <p
-            className={`text-xs max-[399px]:text-[10px] text-center mt-2 ${
+            className={`!font-prompt text-xs max-[399px]:text-[10px] text-center mt-2 ${
               theme === 'light' ? 'text-gray-500' : 'text-gray-400'
             }`}
           >
