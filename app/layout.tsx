@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={prompt.variable}>
       <body
         className={`${prompt.variable}  antialiased`}
         suppressHydrationWarning={true}
