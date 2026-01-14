@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 
 // ใช้ Edge Runtime เพื่อประหยัดค่าใช้จ่าย
 export const runtime = 'edge';
@@ -76,10 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Call API with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 วินาที
-
+    // 4. Call API with streaming mode
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -90,15 +86,12 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           query: query.trim(),
           inputs: {},
-          response_mode: 'blocking',
+          response_mode: 'streaming', // ✅ เปลี่ยนเป็น streaming
           conversation_id: conversation_id || '',
           user: userEmail,
           files: [],
         }),
-        signal: controller.signal,
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -119,21 +112,23 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        throw new Error(`API error: ${response.status}`);
+        return NextResponse.json(
+          { error: `API error: ${response.status}` },
+          { status: response.status }
+        );
       }
 
-      const data = await response.json();
-      
-      // 5. Cache response (optional)
-      return NextResponse.json(data, {
+      // ✅ Stream response กลับไปให้ client
+      return new Response(response.body, {
         headers: {
-          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no', // Disable buffering for nginx/reverse proxies
         },
       });
 
     } catch (fetchError) {
-      clearTimeout(timeoutId);
-      
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         return NextResponse.json(
           { error: 'Request timeout. Please try again.' },

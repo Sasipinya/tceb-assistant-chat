@@ -188,72 +188,106 @@ export default function ChatbotUI() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error(`API request failed: ${res.status}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `API request failed: ${res.status}`);
+      }
 
       const ctype = res.headers.get('content-type') || '';
 
+      // ✅ ตรวจสอบว่าเป็น streaming response
       if (ctype.includes('text/event-stream')) {
         const reader = res.body!.getReader();
         const decoder = new TextDecoder();
-        let acc = '';
+        let buffer = '';
         let answerBuffer = '';
+        let newConvId = '';
 
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          acc += decoder.decode(value, { stream: true });
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-          const lines = acc.split('\n');
-          acc = lines.pop() || '';
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            
+            // เก็บบรรทัดสุดท้ายที่ยังไม่สมบูรณ์ไว้ใน buffer
+            buffer = lines.pop() || '';
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith('data:')) continue;
-            const data = trimmed.slice(5).trim();
+            for (const line of lines) {
+              const trimmed = line.trim();
+              
+              // ข้าม empty lines
+              if (!trimmed) continue;
+              
+              // ตรวจสอบว่าเป็น SSE format
+              if (!trimmed.startsWith('data:')) continue;
+              
+              const data = trimmed.slice(5).trim();
 
-            if (data === '[DONE]') {
-              break;
-            }
-
-            try {
-              const json = JSON.parse(data);
-
-              if (json.conversation_id && !conversationId) {
-                setConversationId(json.conversation_id);
+              // ข้าม [DONE] marker
+              if (data === '[DONE]') {
+                break;
               }
 
-              if (typeof json.delta === 'string' && json.delta.length > 0) {
-                answerBuffer += json.delta;
-                updateMessage(assistantId, {
-                  content: baseGreeting + answerBuffer,
-                  isStreaming: true,
-                });
-              } else if (typeof json.answer === 'string') {
-                answerBuffer = json.answer;
-                updateMessage(assistantId, {
-                  content: baseGreeting + answerBuffer,
-                  isStreaming: true,
-                });
+              try {
+                const json = JSON.parse(data);
+
+                // เก็บ conversation_id
+                if (json.conversation_id && !newConvId) {
+                  newConvId = json.conversation_id;
+                  setConversationId(json.conversation_id);
+                }
+
+                // รับ streaming text จาก Dify API
+                // Format 1: มี answer field (message event)
+                if (json.event === 'message' && json.answer) {
+                  answerBuffer += json.answer;
+                  updateMessage(assistantId, {
+                    content: answerBuffer,
+                    isStreaming: true,
+                  });
+                }
+                // Format 2: มี delta field (agent_message event)
+                else if (json.event === 'agent_message' && json.answer) {
+                  answerBuffer += json.answer;
+                  updateMessage(assistantId, {
+                    content: answerBuffer,
+                    isStreaming: true,
+                  });
+                }
+                // Format 3: มีแค่ answer field
+                else if (json.answer && typeof json.answer === 'string') {
+                  answerBuffer = json.answer;
+                  updateMessage(assistantId, {
+                    content: answerBuffer,
+                    isStreaming: true,
+                  });
+                }
+                // Format 4: error event
+                else if (json.event === 'error') {
+                  throw new Error(json.message || 'API Error');
+                }
+
+              } catch (parseError) {
+                // ถ้า parse ไม่ได้ ให้เอา text มาต่อกันเลย
+                console.warn('Parse error:', parseError);
               }
-            } catch {
-              answerBuffer += String(data);
-              updateMessage(assistantId, {
-                content: baseGreeting + answerBuffer,
-                isStreaming: true,
-              });
             }
           }
+        } finally {
+          reader.releaseLock();
         }
 
-        if (answerBuffer) {
-          updateMessage(assistantId, {
-            content: answerBuffer,
-            isStreaming: false,
-          });
-        } else {
-          updateMessage(assistantId, { isStreaming: false });
-        }
-      } else {
+        // เสร็จแล้ว อัพเดท message สุดท้าย
+        updateMessage(assistantId, {
+          content: answerBuffer || 'ไม่สามารถรับข้อมูลได้',
+          isStreaming: false,
+        });
+
+      } 
+      // ✅ JSON response (blocking mode - fallback)
+      else {
         const result = await res.json();
         const data = result?.success && result?.data ? result.data : result;
 
@@ -264,6 +298,7 @@ export default function ChatbotUI() {
         const fullText =
           data.answer || 'ขออภัยครับ ไม่สามารถประมวลผลคำตอบได้';
 
+        // Animate word by word
         const words = fullText.split(' ');
         let answerCurrent = '';
 
@@ -273,7 +308,7 @@ export default function ChatbotUI() {
             requestAnimationFrame(() => resolve())
           );
           updateMessage(assistantId, {
-            content: baseGreeting + answerCurrent,
+            content: answerCurrent,
             isStreaming: true,
           });
         }
@@ -286,15 +321,14 @@ export default function ChatbotUI() {
     } catch (e) {
       if ((e as Error).name === 'AbortError') {
         updateMessage(assistantId, {
-          content: greetingText + '\n\nยกเลิกคำขอก่อนหน้าแล้ว',
+          content: 'ยกเลิกคำขอแล้ว',
           isStreaming: false,
         });
       } else {
-        console.error(e);
+        console.error('Chat error:', e);
+        const errorMsg = (e as Error).message || 'เกิดข้อผิดพลาด';
         updateMessage(assistantId, {
-          content:
-            greetingText +
-            '\n\nเกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง',
+          content: `เกิดข้อผิดพลาด: ${errorMsg}\n\nกรุณาลองใหม่อีกครั้ง`,
           isStreaming: false,
         });
       }
