@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // 4. Call API with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 วินาที
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 วินาที
 
     try {
       const response = await fetch(apiUrl, {
