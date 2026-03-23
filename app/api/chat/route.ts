@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
 
     // ใช้ environment variable โดยตรง (ไม่ต้องใช้ NEXT_PUBLIC_)
     const apiUrl = process.env.API_URL || 
-      'http://cms-tvai.terodigital.com/api/chat-messages-tceb';
+      'https://cms-tvai.terodigital.com/api/chat-messages-tceb';
     
     const bearerToken = process.env.API_BEARER_TOKEN;
     const userEmail = process.env.API_USER_EMAIL || 'tero.developer@gmail.com';
