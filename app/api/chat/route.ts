@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         query: query,
         inputs: {},
-        response_mode: 'blocking',
+        response_mode: 'streaming',
         conversation_id: conversation_id || '',
         user: 'kreing test',
         files: [],
