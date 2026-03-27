@@ -11,6 +11,10 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'User-Agent': 'EchoapiRuntime/1.1.0',
       },
       body: JSON.stringify({
         query: query,
